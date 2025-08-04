@@ -20,13 +20,12 @@ public:
     RawMemory& operator=(const RawMemory&) = delete;
 
     RawMemory(RawMemory&& other) noexcept {
-        swap(other);
+        Swap(other);
     }
 
     RawMemory& operator=(RawMemory&& other) noexcept {
         if(this != &other) {
-            buffer_ = std::exchange(other.buffer_, nullptr);
-            capacity_ = std::exchange(other.capacity_, 0);
+            Swap(other);
         }
         return *this;
     }
@@ -113,14 +112,7 @@ public:
                 return *this;
             }
             // if capacity is enough
-            if(size_ < other.size_) {
-                std::copy_n(other.begin(), size_, begin());
-                std::uninitialized_copy(other.begin() + size_, other.end(), end());
-            } else {
-                std::copy(other.begin(), other.end(), begin());
-                std::destroy(begin() + other.size_, end());
-            }
-            size_ = other.size_;
+            CopyNoChangeCapacity(other);
         }
         return *this;
     }
@@ -242,8 +234,9 @@ public:
 
 // ********* methods for deleting elements **********************
     void PopBack() {
-            std::destroy_at(end() - 1);
-            --size_;
+        assert(size_);
+        std::destroy_at(end() - 1);
+        --size_;
     }
 
     iterator Erase(const_iterator pos) { /*noexcept(std::is_nothrow_move_assignable_v<T>)*/
@@ -310,6 +303,18 @@ private:
         } else {
             std::uninitialized_copy(source_begin, source_end, dest);
         }
+    }
+    // copies elements from another vector (other) without changing (increasing) the capacity
+    void CopyNoChangeCapacity(const Vector& other) {
+        std::copy_n(other.begin(), std::min(size_, other.size_), begin());
+        
+        if(size_ < other.size_) {
+            std::uninitialized_copy(other.begin() + size_, other.end(), end());
+        } else {
+            std::destroy(begin() + other.size_, end());
+        }
+        
+        size_ = other.size_;
     }
 private: 
     RawMemory<T> data_;
