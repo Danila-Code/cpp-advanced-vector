@@ -1,11 +1,11 @@
-#include "vector.h"
-
+#include <iomanip>
 #include <iostream>
+#include <numeric>
 #include <stdexcept>
 #include <string>
 #include <vector>
 
-#include <iomanip>
+#include "vector.h"
 
 namespace {
 
@@ -560,6 +560,69 @@ void Test6() {
     }
 }
 
+void Test7() {
+    {
+        Vector<int> v;
+        assert(v.Empty());
+
+        v.PushBack(2);
+        assert(!v.Empty());
+
+        v.Erase(v.begin());
+        assert(v.Empty());
+    }
+    {
+        Vector<int> v(10);
+        assert(!v.Empty());
+
+        size_t capacity = v.Capacity();
+        v.Clear();
+        assert(v.Empty());
+        assert(v.Size() == 0);
+        assert(v.Capacity() == capacity);
+    }
+}
+
+void Test8() {
+    {
+        Vector<int> v(10);
+        assert(v.Back() == 0);
+        assert(v.Front() == 0);
+
+        int num = 10;
+        v[0] = num;
+        assert(v.Front() == num);
+
+        v.Front() = 11;
+        assert(v.Front() != num);
+
+        v[v.Size() - 1] = num = 20;
+        assert(v.Back() == num);
+
+        v.Back() = 21;
+        assert(v.Back() != num);
+    }
+}
+
+void Test9() {
+    const size_t size = 10;
+
+    Vector<int> v(size);
+    std::iota(v.begin(), v.end(), 0);
+
+    Vector<int> v_reverse_copy;
+    v_reverse_copy.Reserve(size);
+
+    for(auto r_iter = v.rbegin(); r_iter != v.rend(); ++r_iter) {
+        v_reverse_copy.PushBack(*r_iter);
+    }
+
+    for(size_t i = 0; i < size; ++i) {
+        v[i] += v_reverse_copy[i];
+        assert(v[i] == size - 1);
+    }
+}
+
 struct C {
     C() noexcept {
         ++def_ctor;
@@ -649,6 +712,9 @@ int main() {
         Test4();
         Test5();
         Test6();
+        Test7();
+        Test8();
+        Test9();
         Benchmark();
     } catch (const std::exception& e) {
         std::cerr << e.what() << std::endl;

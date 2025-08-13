@@ -1,10 +1,14 @@
 #pragma once
+
+#include <algorithm>
 #include <cassert>
 #include <cstdlib>
+#include <iterator>
+#include <memory>
 #include <new>
 #include <utility>
-#include <memory>
-#include <algorithm>
+
+
 
 template <typename T>
 class RawMemory {
@@ -87,6 +91,8 @@ class Vector {
 public:
     using iterator = T*;
     using const_iterator = const T*;
+    using reverse_iterator = std::reverse_iterator<iterator>;
+    using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
 // ********* constructors, assignment operators and destructor **********************
     Vector() = default;
@@ -154,6 +160,22 @@ public:
         return cbegin() + size_;
     }
 
+    reverse_iterator rbegin() noexcept {
+        return std::make_reverse_iterator<iterator>(end());
+    }
+
+    const_reverse_iterator crbegin() const noexcept {
+        return std::make_reverse_iterator<const_iterator>(cend());
+    }
+
+    reverse_iterator rend() noexcept {
+        return std::make_reverse_iterator<iterator>(begin());
+    }
+
+    const_reverse_iterator crend() const noexcept {
+        return std::make_reverse_iterator<const_iterator>(cbegin());
+    }
+
 // ********* methods for adding and inserting elements **********************
     void PushBack(const T& value) {
         EmplaceBack(value);
@@ -165,18 +187,7 @@ public:
 
     template <typename...Args>
     T& EmplaceBack(Args&&... args) {
-        if(size_ == Capacity()) {
-            RawMemory<T> new_data(size_ == 0 ? 1 : size_ * 2);
-            new(new_data.GetAddress() + size_) T(std::forward<Args>(args)...);
-
-            UninitializedMoveOrCopy(begin(), end(), new_data.GetAddress());
-
-            data_.Swap(new_data);
-            std::destroy_n(new_data.GetAddress(), size_);
-        } else {
-            new(data_.GetAddress() + size_) T(std::forward<Args>(args)...);
-        }
-        ++size_;
+        Emplace(cend(), std::forward<Args>(args)...);
         return data_[size_ - 1];
     }
 
@@ -248,6 +259,11 @@ public:
         return begin() + shift;
     }
 
+    void Clear() noexcept {
+        std::destroy(begin(), end());
+        size_ = 0;
+    }
+
 // ********* methods for changing the size and capacity **********************
     void Resize(size_t new_size) {
         if(size_ < new_size) {
@@ -280,7 +296,29 @@ public:
         return data_.Capacity();
     }
 
+// Check the emptiness of vector
+    bool Empty() const {
+        return size_ == 0;
+    }
+
 // ********* methods for accessing elements **********************
+    T& Back() {
+        assert(size_);
+        return *(end() - 1);
+    }
+    const T& Back() const {
+        return const_cast<Vector*>(this)->Back();
+    }
+
+    T& Front() {
+        assert(size_);
+        return *begin();
+    }
+
+    const T& Front() const {
+        return const_cast<Vector*>(this)->Front();
+    }
+
     const T& operator[](size_t index) const noexcept {
         return const_cast<Vector&>(*this)[index];
     }
